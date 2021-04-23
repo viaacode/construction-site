@@ -27,25 +27,25 @@ def assert_graph_isomorphic(given, expected):
     assert iso1 == iso2
 
 
-def assert_json_isomorphic(j, expected):
+def assert_json_isomorphic(j, expected, **kwargs):
     g = Graph()
-    for t in parse_json(j, namespace=NS):
+    for t in parse_json(j, namespace=NS, **kwargs):
         g.add(t)
 
     assert_graph_isomorphic(g, expected)
 
 
-def assert_dict_isomorphic(d, expected):
+def assert_dict_isomorphic(d, expected, **kwargs):
     g = Graph()
-    for t in parse_dict(d, namespace=NS):
+    for t in parse_dict(d, namespace=NS, **kwargs):
         g.add(t)
 
     assert_graph_isomorphic(g, expected)
 
 
-def assert_isomorphic(j, expected):
-    assert_json_isomorphic(j, expected)
-    assert_dict_isomorphic(json.loads(j), expected)
+def assert_isomorphic(j, expected, **kwargs):
+    assert_json_isomorphic(j, expected, **kwargs)
+    assert_dict_isomorphic(json.loads(j), expected, **kwargs)
 
 
 def test_invalid():
@@ -62,6 +62,14 @@ def test_object():
     expected.add((BNode(), NS.key, Literal("val")))
 
     assert_isomorphic('{ "key": "val" }', expected)
+
+
+def test_object_with_instance_namespace():
+    instance_ns = Namespace("urn:test:")
+    expected = Graph()
+    expected.add((instance_ns["0"], NS.key, Literal("val")))
+
+    assert_isomorphic('{ "key": "val" }', expected, instance_ns=instance_ns)
 
 
 def test_duplicate_keys():
@@ -89,6 +97,23 @@ def test_nested_objects():
 
     assert_isomorphic(
         '{ "before": "val", "obj": { "key": "val" }, "after": "val" }', expected
+    )
+
+
+def test_nested_objects_with_instance_namespace():
+    expected = Graph()
+    instance_ns = Namespace("urn:test:")
+    b1 = instance_ns["0"]
+    b2 = instance_ns["1"]
+    expected.add((b1, NS.before, Literal("val")))
+    expected.add((b1, NS.obj, b2))
+    expected.add((b2, NS.key, Literal("val")))
+    expected.add((b1, NS.after, Literal("val")))
+
+    assert_isomorphic(
+        '{ "before": "val", "obj": { "key": "val" }, "after": "val" }',
+        expected,
+        instance_ns=instance_ns,
     )
 
 

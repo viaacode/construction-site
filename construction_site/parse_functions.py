@@ -6,6 +6,7 @@ from rdflib import BNode, Literal, Namespace
 
 def parse_dict(data, **kwargs):
     """Generates RDFlib triples from a python dictionary using a direct mapping."""
+
     def basic_parse(data):
         if isinstance(data, dict):  # start_map
             yield "start_map", None
@@ -49,17 +50,21 @@ def _parse_events(events, **kwargs):
 
     # initalize defaults
     namespace = Namespace("http://localhost/")
+    instance_ns = None
 
     if "namespace" in kwargs:
         namespace = kwargs["namespace"]
+
+    if "instance_ns" in kwargs and isinstance(kwargs["instance_ns"], Namespace):
+        instance_ns = kwargs["instance_ns"]
 
     # initializing deque
     subjectStack = deque([])
     arrayProperties = {}
     property = None
 
+    i = 0
     for event, value in events:
-        print(event, value)
         if event == "start_array" and subjectStack and property is not None:
             # fetching the last subject
             s = subjectStack[-1]
@@ -71,7 +76,11 @@ def _parse_events(events, **kwargs):
             arrayProperties.pop(s, None)
 
         if event == "start_map":
-            subject = BNode()
+            if instance_ns is not None:
+                subject = instance_ns[str(i)]
+                i += 1
+            else:
+                subject = BNode()
             # add triple with current array property, if any
             if property is not None and subjectStack:
                 # fetching the last subject
