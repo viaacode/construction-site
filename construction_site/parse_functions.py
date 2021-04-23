@@ -3,16 +3,61 @@ from collections import deque
 import ijson
 from rdflib import BNode, Literal, Namespace
 
-def parse_json(json, namespace=Namespace("http://localhost/")):
+
+def parse_dict(data, **kwargs):
+    def basic_parse(data):
+        if isinstance(data, dict):  # start_map
+            yield "start_map", None
+            for k, v in data.items():
+                yield "map_key", k
+                for event, value in basic_parse(v):
+                    yield event, value
+            yield "end_map", None
+        elif isinstance(data, list):  # start_list
+            yield "start_array", None
+            for i in data:
+                for event, value in basic_parse(i):
+                    yield event, value
+            yield "end_array", None
+        elif data is None:
+            yield "null", data
+        elif isinstance(data, str):
+            yield "string", data
+        elif isinstance(data, bool):
+            yield "boolean", data
+        elif isinstance(data, int):
+            yield "integer", data
+        elif isinstance(data, float):
+            yield "double", data
+
+    events = basic_parse(data)
+    return _parse_events(events, **kwargs)
+
+
+def parse_json(json, **kwargs):
+    """Generates RDFlib triples from a file-like object or a string using a direct mapping."""
+
+    #   parse json
+    events = ijson.basic_parse(json, use_float=True)
+
+    return _parse_events(events, **kwargs)
+
+
+def _parse_events(events, **kwargs):
+
+    # initalize defaults
+    namespace = Namespace("http://localhost/")
+
+    if "namespace" in kwargs:
+        namespace = kwargs["namespace"]
 
     # initializing deque
     subjectStack = deque([])
     arrayProperties = {}
     property = None
 
-    events = ijson.basic_parse(json, use_float = True)
-
     for event, value in events:
+        print(event, value)
         if event == "start_array" and subjectStack and property is not None:
             # fetching the last subject
             s = subjectStack[-1]
