@@ -5,6 +5,7 @@ from rdflib import BNode, Literal, Namespace
 
 
 def parse_dict(data, **kwargs):
+    """Generates RDFlib triples from a python dictionary using a direct mapping."""
     def basic_parse(data):
         if isinstance(data, dict):  # start_map
             yield "start_map", None
@@ -44,6 +45,7 @@ def parse_json(json, **kwargs):
 
 
 def _parse_events(events, **kwargs):
+    """Internal method that generates RDFlib triples from a generator function that yields event, value pairs."""
 
     # initalize defaults
     namespace = Namespace("http://localhost/")
