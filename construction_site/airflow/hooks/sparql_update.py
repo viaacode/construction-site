@@ -110,3 +110,21 @@ class SparqlUpdateHook(HttpHook):
             self.log.info(results.response.read())
 
             self.sparql.resetQuery()
+
+    def insert(self, triples)
+        query = "INSERT DATA {{"
+
+        for t in triples:
+            sparql += self.to_ntriples(t)
+
+        query = "}}"
+
+        self.sparql_update(query)
+
+    @staticmethod
+    def to_ntriples(t, namespace_manager=None):
+        return "{} {} {} . \n".format(
+            t[0].n3(namespace_manager),
+            t[1].n3(namespace_manager),
+            t[2].n3(namespace_manager),
+        )
