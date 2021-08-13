@@ -52,7 +52,7 @@ def _parse_events(events, **kwargs):
     namespace = Namespace("http://localhost/")
     instance_ns = None
 
-    if "namespace" in kwargs:
+    if "namespace" in kwargs and isinstance(kwargs["namespace"], Namespace):
         namespace = kwargs["namespace"]
 
     if "instance_ns" in kwargs and isinstance(kwargs["instance_ns"], Namespace):

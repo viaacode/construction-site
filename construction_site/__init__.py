@@ -4,7 +4,7 @@ construction-site.
 A usable and scalable API for RDF construction.
 """
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 __author__ = 'Miel Vander Sande'
 __credits__ = 'meemoo vzw'
 

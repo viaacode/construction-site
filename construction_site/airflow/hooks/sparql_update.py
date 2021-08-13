@@ -15,25 +15,23 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-from typing import Any, Dict, Optional
-from airflow.providers.http.operators.http import HttpHook
-from SPARQLWrapper import DIGEST, POST, SPARQLWrapper
-from SPARQLWrapper.Wrapper import BASIC
 import os.path
-from requests import auth
-from requests.auth import HTTPBasicAuth, HTTPDigestAuth
+from typing import Any, Dict, Optional
 
-AUTH_TYPES = {
-    HTTPBasicAuth: BASIC,
-    HTTPDigestAuth: DIGEST
-}
+from airflow.providers.http.operators.http import HttpHook
+from requests.auth import HTTPBasicAuth, HTTPDigestAuth
+from SPARQLWrapper import DIGEST, SPARQLWrapper
+from SPARQLWrapper.Wrapper import BASIC
+
+AUTH_TYPES = {HTTPBasicAuth: BASIC, HTTPDigestAuth: DIGEST}
+
 
 class SparqlUpdateHook(HttpHook):
     """
     Interact with SPARQL endpoints.
     :param method: the API method to be called
     :type method: str
-    :param http_conn_id: :ref:`http connection<howto/connection:http>` that has the 
+    :param http_conn_id: :ref:`http connection<howto/connection:http>` that has the
         SPARQL endpoint url i.e https://dbpedia.org/sparql and optional authentication credentials. Default
         headers can also be specified in the Extra field in json format.
     :type http_conn_id: str
@@ -41,12 +39,12 @@ class SparqlUpdateHook(HttpHook):
     :type auth_type: AuthBase of python requests lib
     """
 
-    default_conn_name = 'sparql_endpoint'
-    hook_name = 'SPARQLUpdate'
+    default_conn_name = "sparql_endpoint"
+    hook_name = "SPARQLUpdate"
 
     def __init__(
         self,
-        method: str = 'POST',
+        method: str = "POST",
         http_conn_id: str = default_conn_name,
         auth_type: Any = HTTPBasicAuth,
     ) -> None:
@@ -71,47 +69,41 @@ class SparqlUpdateHook(HttpHook):
         if self.auth_type in AUTH_TYPES:
             self.sparql.setHTTPAuth(AUTH_TYPES[self.auth_type])
 
-        
         self.sparql.setCredentials(conn.login, conn.password)
         self.sparql.setMethod(self.method)
 
+    def sparql_update(self, query: str, headers: Optional[Dict[str, Any]] = None):
+        """Execute a sparql query on a sparql endpoint.
+        :param query: SPARQL Update query to be uploaded or request parameters
+        :type query: str
+        :param headers: additional headers to be passed through as a dictionary
+        :type headers: dict
+        """
 
-    def sparql_update(
-        self, 
-        query: str, 
-        headers: Optional[Dict[str, Any]] = None):
-            """Execute a sparql query on a sparql endpoint.
-            :param query: SPARQL Update query to be uploaded or request parameters
-            :type query: str
-            :param headers: additional headers to be passed through as a dictionary
-            :type headers: dict
-            """
+        query_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), query)
+        if os.path.isfile(query_path):
+            with open(query_path) as f:
+                query = f.read()
+        else:
+            self.log.warning("Query does not point to a file; executing as query text.")
 
-            query_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), query)
-            if os.path.isfile(query_path):
-                with open(query_path) as f:
-                    query = f.read()
-            else:
-                self.log.warning("Query does not point to a file; executing as query text.")
+        self.sparql.setQuery(query)
 
+        if not self.sparql.isSparqlUpdateRequest():
+            self.log.warning("Query is not an update query.")
 
-            self.sparql.setQuery(query)
+        if headers is not None:
+            for h in headers.items():
+                self.sparql.addCustomHttpHeader(h[0], h[1])
 
-            if not self.sparql.isSparqlUpdateRequest():
-                self.log.warning("Query is not an update query.")
+        self.log.info("Sending query '{}' to {}".format(query, self.endpoint))
 
-            if headers is not None:
-                for h in headers.items():
-                    self.sparql.addCustomHttpHeader(h[0], h[1])
+        results = self.sparql.query()
+        self.log.info(results.response.read())
 
-            self.log.info("Sending query '{}' to {}".format(query, self.endpoint))
+        self.sparql.resetQuery()
 
-            results = self.sparql.query()
-            self.log.info(results.response.read())
-
-            self.sparql.resetQuery()
-
-    def insert(self, triples)
+    def insert(self, triples):
         query = "INSERT DATA {{"
 
         for t in triples:
